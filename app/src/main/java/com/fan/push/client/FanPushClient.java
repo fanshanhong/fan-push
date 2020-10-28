@@ -22,7 +22,10 @@ public class FanPushClient {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(PushServerHandler.class);
 
-    public static void main(String[] args) {
+
+
+
+    void connect() {
 
         NioEventLoopGroup eventLoopGroup = new NioEventLoopGroup();
 
@@ -54,7 +57,7 @@ public class FanPushClient {
                 @Override
                 public void operationComplete(Future<? super Void> future) throws Exception {
 
-                    if (future.isSuccess() && channel!=null) {
+                    if (future.isSuccess() && channel != null) {
                         logger.info("连接成功");
                     } else {
                         logger.info("连接失败");
@@ -73,4 +76,5 @@ public class FanPushClient {
             eventLoopGroup.shutdownGracefully();
         }
     }
+
 }
