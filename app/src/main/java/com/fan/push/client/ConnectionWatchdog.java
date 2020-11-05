@@ -82,7 +82,6 @@ public class ConnectionWatchdog extends ChannelInboundHandlerAdapter implements 
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
         Channel ch = ctx.channel();
 
-
         // 清零
         attempts = 0;
 
@@ -174,7 +173,7 @@ public class ConnectionWatchdog extends ChannelInboundHandlerAdapter implements 
         //&& (group == null || (group.size() < group.getCapacity()));
 
 
-        // 如果是握手成功的情况下, 才需要重连.
+        // TODO:如果是握手成功的情况下, 才需要重连.
         // 并且,当前不是正在连接中的状态. 有可能正在连呢,又去连接了.
         return true;
     }
