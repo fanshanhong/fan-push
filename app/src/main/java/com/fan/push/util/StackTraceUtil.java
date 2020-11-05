@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.fan.push.server;
+package com.fan.push.util;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;

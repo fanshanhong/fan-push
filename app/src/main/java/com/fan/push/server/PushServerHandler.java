@@ -1,12 +1,18 @@
 package com.fan.push.server;
 
 import com.fan.push.client.InputScannerRunnable;
+import com.fan.push.message.Message;
+import com.fan.push.util.GsonUtil;
+import com.fan.push.util.LoggerUtil;
+import com.fan.push.util.StackTraceUtil;
 
 import java.io.IOException;
-import java.nio.charset.Charset;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelHandlerContext;
@@ -15,21 +21,23 @@ import io.netty.handler.codec.DecoderException;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.Signal;
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
+
+import static com.fan.push.util.LoggerUtil.logger;
 
 public class PushServerHandler extends ChannelInboundHandlerAdapter {
 
+    // 用于统计, 当前有多少客户端连接了
     private static final AtomicInteger channelCounter = new AtomicInteger(0);
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(PushServerHandler.class);
-
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
         int count = channelCounter.incrementAndGet();
 
         logger.info("Connects with {} as the {}th channel.", ctx.channel(), count);
+
+        // 开启一个线程, 用于从标准输入读取数据并发送到客户端
         new Thread(new InputScannerRunnable(ctx)).start();
+
         super.channelActive(ctx);
     }
 
@@ -49,8 +57,45 @@ public class PushServerHandler extends ChannelInboundHandlerAdapter {
         if (msg instanceof ByteBuf) {
             ByteBuf byteBuf = (ByteBuf) msg;
 
+            String messageStr = byteBuf.toString(CharsetUtil.UTF_8);
+
             // 需要定好编码规则, 应该统一使用UTF-8的编码
-            System.out.println("收到客户端的消息:" + byteBuf.toString(CharsetUtil.UTF_8)); // Magic Socket Debugger 用UTF-8编码
+            logger.info("收到客户端的消息:" + messageStr); // Magic Socket Debugger 用UTF-8编码
+
+
+            Message message = GsonUtil.getInstance().fromJson(messageStr, Message.class);
+            if (1001 == message.getMessageType()) {// 握手消息
+
+
+                if (message.getContent().equals("username=111&password=222")) {
+
+                    // 成功
+                    // 先把channel 加入Map 进行管理
+                    // 回复一个握手成功
+
+                    ChannelHolder.channelMap.put(message.getContent(), ch);
+
+                    Message handshakeSuccessMessage = new Message();
+                    handshakeSuccessMessage.setMessageType(1001);
+                    handshakeSuccessMessage.setStatus(1);
+                    ctx.channel().writeAndFlush(Unpooled.wrappedBuffer(GsonUtil.getInstance().toJson(handshakeSuccessMessage).getBytes(CharsetUtil.UTF_8)));
+                } else {
+                    // 握手失败
+                    ChannelHolder.channelMap.remove(message.getContent());
+
+                    Message handshakeFailMessage = new Message();
+                    handshakeFailMessage.setMessageType(1001);
+                    handshakeFailMessage.setStatus(-1);
+                    ctx.channel().writeAndFlush(Unpooled.wrappedBuffer(GsonUtil.getInstance().toJson(handshakeFailMessage).getBytes(CharsetUtil.UTF_8)));
+                }
+
+            } else if (1002 == message.getMessageType()) {
+                ctx.channel().writeAndFlush(Unpooled.wrappedBuffer(GsonUtil.getInstance().toJson(Message.obtainPongMessage()).getBytes(CharsetUtil.UTF_8)));
+
+            } else if (1003 == message.getMessageType()) {
+
+            }
+
         } else {
             logger.warn("Unexpected message type received: {}, channel: {}.", msg.getClass(), ch);
 

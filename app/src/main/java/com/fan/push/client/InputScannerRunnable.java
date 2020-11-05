@@ -1,5 +1,7 @@
 package com.fan.push.client;
 
+import com.fan.push.util.LoggerUtil;
+
 import java.util.Scanner;
 
 import io.netty.buffer.Unpooled;
@@ -20,7 +22,7 @@ public class InputScannerRunnable implements Runnable {
         while (scanner.hasNextLine()) {
             String line = scanner.nextLine();
             if (line.equalsIgnoreCase("##stop")) {
-                System.out.println("end!!");
+                LoggerUtil.logger.info("input end!!");
                 // 这块如果关闭了Channel, 想要再发送, 就需要重新建立连接了
                 ctx.close();
                 return;
