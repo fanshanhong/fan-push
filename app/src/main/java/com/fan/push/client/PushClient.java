@@ -10,6 +10,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
@@ -52,7 +53,7 @@ public class PushClient {
             // 设置禁用nagle算法
             bootstrap.option(ChannelOption.TCP_NODELAY, true);
 //            bootstrap.option(ChannelOption.SO_TIMEOUT, 6000);
-            watchdog = new ConnectionWatchdog(bootstrap, new HashedWheelTimer(), new InetSocketAddress("192.168.110.110", 10010));
+            watchdog = new ConnectionWatchdog(bootstrap, new HashedWheelTimer(), new InetSocketAddress("192.168.0.106", 10010));
             heartBeatClientHandler = new HeartBeatClientHandler(bootstrap);
             bootstrap.group(eventLoopGroup)
                     .channel(NioSocketChannel.class)
@@ -82,7 +83,7 @@ public class PushClient {
 
             logger.info("正在连接中...");
 
-            ChannelFuture future = bootstrap.connect(new InetSocketAddress("192.168.110.110", 10010)).sync();
+            ChannelFuture future = bootstrap.connect(new InetSocketAddress("192.168.0.106",10010));
 
             channel = future.channel();
 
@@ -104,7 +105,22 @@ public class PushClient {
                 }
             });
 
-            future.channel().closeFuture().sync();
+            ChannelFuture channelFuture = future.channel().closeFuture();
+            channelFuture.addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture future) throws Exception {
+
+
+                    // 关闭会进入这里， 也会进入 inAvtive， 在inActive里就可以了。
+                    if(future.isSuccess()) {
+                        System.out.println("aaaaaa:關閉成功");
+
+
+                    } else {
+                        System.out.println("aaaaaa:關閉bu 成功");
+                    }
+                }
+            });
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -119,3 +135,20 @@ public class PushClient {
         }
     }
 }
+
+
+// Channel.closeFuture() returns a ChannelFuture that will notify you when the channel is closed. You can add a ChannelFutureListener to the future in B so that you can make another connection attempt there.
+//
+//You probably want to repeat this until the connection attempt succeeds finally:
+//
+//private void doConnect() {
+//    Bootstrap b = ...;
+//    b.connect().addListener((ChannelFuture f) -> {
+//        if (!f.isSuccess()) {
+//            long nextRetryDelay = nextRetryDelay(...);
+//            f.channel().eventLoop().schedule(nextRetryDelay, ..., () -> {
+//                doConnect();
+//            }); // or you can give up at some point by just doing nothing.
+//        }
+//    });
+//}

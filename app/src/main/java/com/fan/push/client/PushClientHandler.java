@@ -64,6 +64,7 @@ public class PushClientHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
         LoggerUtil.logger.info("channelRegistered");
+        System.out.println(ctx.channel().id().asLongText());
     }
 
     @Override
