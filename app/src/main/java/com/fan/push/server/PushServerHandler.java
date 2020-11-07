@@ -3,12 +3,9 @@ package com.fan.push.server;
 import com.fan.push.client.InputScannerRunnable;
 import com.fan.push.message.Message;
 import com.fan.push.util.GsonUtil;
-import com.fan.push.util.LoggerUtil;
 import com.fan.push.util.StackTraceUtil;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import io.netty.buffer.ByteBuf;

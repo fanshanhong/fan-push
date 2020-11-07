@@ -24,6 +24,5 @@ import io.netty.channel.ChannelHandler;
  * @author jiachun.fjc
  */
 public interface ChannelHandlerHolder {
-
     ChannelHandler[] handlers();
 }
