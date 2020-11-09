@@ -15,14 +15,44 @@
  */
 package com.fan.push.client;
 
-import io.netty.channel.ChannelHandler;
+import java.util.concurrent.TimeUnit;
 
-/**
- * jupiter
- * org.jupiter.transport.netty.handler
- *
- * @author jiachun.fjc
- */
-public interface ChannelHandlerHolder {
-    ChannelHandler[] handlers();
+import io.netty.channel.ChannelHandler;
+import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
+import io.netty.handler.codec.LengthFieldPrepender;
+import io.netty.handler.timeout.IdleStateHandler;
+
+public class ChannelHandlerHolder {
+
+    /**
+     * 通用的业务处理Handler
+     *
+     * @return
+     */
+    public static ChannelHandler[] handlers() {
+        return new ChannelHandler[]{
+                new ConnectionWatchdog(),
+                new IdleStateHandler(20, 5, 0, TimeUnit.SECONDS),
+                new LengthFieldPrepender(2),
+                new LengthFieldBasedFrameDecoder(65535, 0, 2, 0, 2),
+                new HeartBeatClientHandler(),
+                new PushClientHandler()
+        };
+    }
+
+    /**
+     * 心跳Handler
+     *
+     * @return
+     */
+    public static ChannelHandler[] heartbeatHandlers() {
+        // 握手成功后, 才把  watchDog 和  IdleStateHandler加入到pipeline中做心跳和重连操作.
+        // 如果都没有握手成功, 就认为不是合法用户, 不需要这些
+
+        return new ChannelHandler[]{
+
+        };
+
+
+    }
 }

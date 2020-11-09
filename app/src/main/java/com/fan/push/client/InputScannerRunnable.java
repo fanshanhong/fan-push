@@ -22,7 +22,7 @@ public class InputScannerRunnable implements Runnable {
         while (scanner.hasNextLine()) {
             String line = scanner.nextLine();
             if (line.equalsIgnoreCase("##stop")) {
-                LoggerUtil.logger.info("input end!!");
+                System.out.println("input end!!");
                 // 这块如果关闭了Channel, 想要再发送, 就需要重新建立连接了
                 ctx.close();
                 return;

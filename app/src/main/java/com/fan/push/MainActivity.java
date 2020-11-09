@@ -26,8 +26,8 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.button).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if (pushClient != null && pushClient.channel != null)
-                    pushClient.channel.writeAndFlush(Unpooled.wrappedBuffer(editText.getText().toString().getBytes(CharsetUtil.UTF_8)));
+//                if (pushClient != null && pushClient.channel != null)
+//                    pushClient.channel.writeAndFlush(Unpooled.wrappedBuffer(editText.getText().toString().getBytes(CharsetUtil.UTF_8)));
 
             }
         });
@@ -40,8 +40,8 @@ public class MainActivity extends AppCompatActivity {
                             @Override
                             public void run() {
                                 System.out.println("thread:" + Thread.currentThread().getName());
-                                pushClient = new PushClient();
-                                pushClient.connect();
+//                                pushClient = new PushClient();
+//                                pushClient.connect();
                             }
                         }
                 ).start();
