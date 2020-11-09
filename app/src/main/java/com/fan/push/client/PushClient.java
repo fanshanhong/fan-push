@@ -11,6 +11,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -67,7 +68,7 @@ public class PushClient {
     private static final int MAX_ATTEMPTS = 12;
     private Timer timer = new HashedWheelTimer();
 
-    public void clearAttempts(){
+    public void clearAttempts() {
         attempts = 0;
     }
 
@@ -95,7 +96,9 @@ public class PushClient {
             bootstrap.handler(new ChannelInitializer<SocketChannel>() {
                 @Override
                 protected void initChannel(SocketChannel ch) throws Exception {
-                    ch.pipeline().addLast(ChannelHandlerHolder.handlers());
+                    for (ChannelHandler handler : ChannelHandlerHolder.handlers()) {
+                        ch.pipeline().addLast(handler.getClass().getSimpleName(), handler);
+                    }
                 }
             });
 
@@ -159,7 +162,7 @@ public class PushClient {
     public void startNewTimerToReconnect() {
 
         if (!PushClient.getInstance().isReconnectNeeded()) {
-            logger.warn("Cancel reconnecting with {}.", SERVER_IP+":"+SERVER_PORT);
+            logger.warn("Cancel reconnecting with {}.", SERVER_IP + ":" + SERVER_PORT);
             return;
         }
 
@@ -185,9 +188,18 @@ public class PushClient {
         try {
             if (channel != null) {
                 try {
-                    System.out.println("重连之前, 先关闭channel");
+
+                    System.out.println("关闭Channel, 先移除掉 Channel 中的 Handler");
+                    for (ChannelHandler handler : ChannelHandlerHolder.handlers()) {
+                        removeHandler(channel, handler.getClass().getSimpleName());
+                    }
+                    for (ChannelHandler handler : ChannelHandlerHolder.heartbeatHandlers()) {
+                        removeHandler(channel, handler.getClass().getSimpleName());
+                    }
+
                 } finally {
                     try {
+                        System.out.println("重连之前, 先关闭channel");
                         channel.close();
                     } catch (Exception ex) {
                     }

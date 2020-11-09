@@ -4,6 +4,7 @@ import java.nio.charset.Charset;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.util.CharsetUtil;
@@ -35,7 +36,10 @@ public class PushClientHandler extends ChannelInboundHandlerAdapter {
                 PushClient.getInstance().close(ctx.channel());
             } else if (message.getMessageType() == 1001 && message.getStatus() == 1) {
                 // 握手成功, 开始心跳, 再add IdleStateHandler才对
-                ctx.pipeline().addFirst(ChannelHandlerHolder.heartbeatHandlers());
+                for (ChannelHandler handler : ChannelHandlerHolder.heartbeatHandlers()) {
+                    ctx.pipeline().addFirst(handler.getClass().getSimpleName(), handler);
+                }
+
                 // 主动先发一条心跳数据包给服务端
                 ctx.writeAndFlush(Unpooled.wrappedBuffer(GsonUtil.getInstance().toJson(Message.obtainPingMessage()).getBytes(CharsetUtil.UTF_8)));
             }

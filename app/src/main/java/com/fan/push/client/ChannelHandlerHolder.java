@@ -32,7 +32,6 @@ public class ChannelHandlerHolder {
     public static ChannelHandler[] handlers() {
         return new ChannelHandler[]{
                 new ConnectionWatchdog(),
-                new IdleStateHandler(20, 5, 0, TimeUnit.SECONDS),
                 new LengthFieldPrepender(2),
                 new LengthFieldBasedFrameDecoder(65535, 0, 2, 0, 2),
                 new HeartBeatClientHandler(),
@@ -50,7 +49,7 @@ public class ChannelHandlerHolder {
         // 如果都没有握手成功, 就认为不是合法用户, 不需要这些
 
         return new ChannelHandler[]{
-
+                new IdleStateHandler(20, 5, 0, TimeUnit.SECONDS),
         };
 
 
