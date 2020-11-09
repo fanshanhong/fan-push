@@ -44,7 +44,8 @@ public class PushServerHandler extends ChannelInboundHandlerAdapter {
 
         logger.warn("Disconnects with {} as the {}th channel.", ctx.channel(), count);
 
-        super.channelInactive(ctx);
+        ChannelHolder.getInstance().offline(ctx.channel());
+        ctx.close();
     }
 
     @Override
@@ -70,7 +71,7 @@ public class PushServerHandler extends ChannelInboundHandlerAdapter {
                     // 先把channel 加入Map 进行管理
                     // 回复一个握手成功
 
-                    ChannelHolder.channelMap.put(message.getContent(), ch);
+                    ChannelHolder.getInstance().online(ctx.channel(), message.getContent());
 
                     Message handshakeSuccessMessage = new Message();
                     handshakeSuccessMessage.setMessageType(1001);
@@ -78,7 +79,7 @@ public class PushServerHandler extends ChannelInboundHandlerAdapter {
                     ctx.channel().writeAndFlush(Unpooled.wrappedBuffer(GsonUtil.getInstance().toJson(handshakeSuccessMessage).getBytes(CharsetUtil.UTF_8)));
                 } else {
                     // 握手失败
-                    ChannelHolder.channelMap.remove(message.getContent());
+                    ChannelHolder.getInstance().offline(ctx.channel());
 
                     Message handshakeFailMessage = new Message();
                     handshakeFailMessage.setMessageType(1001);

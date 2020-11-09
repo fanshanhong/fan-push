@@ -1,5 +1,7 @@
 package com.fan.push.server;
 
+import java.util.concurrent.TimeUnit;
+
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
@@ -8,9 +10,10 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.LengthFieldPrepender;
+import io.netty.handler.timeout.IdleStateHandler;
 
 public class PushServer {
-    
+
     public static void main(String[] args) {
         PushServer pushServer = new PushServer();
         pushServer.bind();
@@ -31,6 +34,9 @@ public class PushServer {
                     .channel(NioServerSocketChannel.class)// 指定 bossGroup 使用 NioServerSocketChannel 来处理连接请求
                     .childHandler(new ChannelInitializer<SocketChannel>() {
                         protected void initChannel(SocketChannel ch) throws Exception {
+
+                            ch.pipeline().addLast(new IdleStateHandler(23, 0, 0, TimeUnit.SECONDS));
+                            ch.pipeline().addLast(new HeartBeatServerHandler());
 
                             // LengthFieldPrepender 是个 MessageToMessageEncoder<ByteBuf>, 编码, 出站
                             // 输入类型是ByteBuf, 输出类型也是ByteBuf
