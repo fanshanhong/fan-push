@@ -64,6 +64,7 @@ public class PushClient {
     private Channel channel = null;
 
     private int attempts = 0;
+    private static final int MAX_ATTEMPTS = 12;
     private Timer timer = new HashedWheelTimer();
 
     public void clearAttempts(){
@@ -133,16 +134,16 @@ public class PushClient {
                 }
             });
 
-            ChannelFuture channelFuture = future.channel().closeFuture();
-            channelFuture.addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
-                    // 关闭会进入这里， 也会进入 channelInActive， 在channelInActive里处理就可以了。
-                    if (future.isSuccess()) {
-                        System.out.println("客户端关闭");
-                    }
-                }
-            });
+            ChannelFuture channelFuture = future.channel().closeFuture().sync();
+//            channelFuture.addListener(new ChannelFutureListener() {
+//                @Override
+//                public void operationComplete(ChannelFuture future) throws Exception {
+//                    // 关闭会进入这里， 也会进入 channelInActive， 在channelInActive里处理就可以了。
+//                    if (future.isSuccess()) {
+//                        System.out.println("客户端关闭");
+//                    }
+//                }
+//            });
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -163,7 +164,7 @@ public class PushClient {
         }
 
         // 重新连接
-        if (attempts < 9) {
+        if (attempts < MAX_ATTEMPTS) {
             attempts++;
         }
         long t = 2 << attempts;
@@ -184,7 +185,7 @@ public class PushClient {
         try {
             if (channel != null) {
                 try {
-                    System.out.println("开始关闭channel");
+                    System.out.println("重连之前, 先关闭channel");
                 } finally {
                     try {
                         channel.close();
@@ -196,7 +197,7 @@ public class PushClient {
             }
         } catch (Exception ex) {
             ex.printStackTrace();
-            System.out.println("关闭channel出错，reason:" + ex.getMessage());
+            System.out.println("重连之前, 关闭channel出错，reason:" + ex.getMessage());
         }
     }
 

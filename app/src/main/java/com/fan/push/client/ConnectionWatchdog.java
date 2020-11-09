@@ -49,6 +49,7 @@ public class ConnectionWatchdog extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        PushClient.connectStatus = PushClient.CONNECT_STATE_FAILURE;
         boolean doReconnect = PushClient.getInstance().isReconnectNeeded();
         // 需要重连
         if (doReconnect) {

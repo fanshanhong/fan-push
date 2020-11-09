@@ -1,7 +1,5 @@
 package com.fan.push.client;
 
-import com.fan.push.util.LoggerUtil;
-
 import java.util.Scanner;
 
 import io.netty.buffer.Unpooled;

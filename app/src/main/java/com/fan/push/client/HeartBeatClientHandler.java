@@ -25,6 +25,7 @@ public class HeartBeatClientHandler extends ChannelInboundHandlerAdapter {
                     //      如果是服务器断网,客户端断网之类的情况,客户端不会进入 inActive, 只能通过这里的 读超时来判断
                     // 注意: 手机端断开WIFI,或者开飞行模式, 都是会触发 ChannelInActive的
                     // 这里主要是用于网络中间节点断了这种情况.
+                    PushClient.connectStatus = PushClient.CONNECT_STATE_FAILURE;
                     LoggerUtil.logger.info("PushClient.connectState=" + PushClient.connectStatus + "  PushClient.isClosed=" + PushClient.isClosed);
 
                     if (!PushClient.getInstance().isReconnectNeeded()) {
