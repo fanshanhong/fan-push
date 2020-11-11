@@ -1,8 +1,12 @@
 package com.fan.push.server;
 
+import com.fan.push.message.Message;
+import com.fan.push.util.GsonUtil;
+
 import java.util.concurrent.TimeUnit;
 
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -11,12 +15,37 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.LengthFieldPrepender;
 import io.netty.handler.timeout.IdleStateHandler;
+import io.netty.util.CharsetUtil;
+import io.netty.util.internal.StringUtil;
 
 public class PushServer {
+
+    public MessageRetryManager messageRetryManager = new MessageRetryManager(this);
 
     public static void main(String[] args) {
         PushServer pushServer = new PushServer();
         pushServer.bind();
+    }
+
+    public void sendMsg(String userId, Message message, boolean addToRetryManager) {
+
+        if (addToRetryManager) {
+            messageRetryManager.add(userId, message);
+        }
+
+        if (ChannelHolder.getInstance().isOnline(userId)) {
+            ChannelHolder.getInstance().getChannelByUserId(userId).writeAndFlush(Unpooled.copiedBuffer(GsonUtil.getInstance().toJson(message).getBytes(CharsetUtil.UTF_8)));
+        }
+    }
+
+    public void removeMsgFromRetryManager(String userId, Message message) {
+        if(StringUtil.isNullOrEmpty(userId)) {
+            throw new IllegalArgumentException("removeMsgFromRetryManager userId can not be null");
+        }
+        if(message == null) {
+            throw new IllegalArgumentException("removeMsgFromRetryManager message can not be null");
+        }
+        messageRetryManager.remove(userId, message);
     }
 
     void bind() {
@@ -46,7 +75,7 @@ public class PushServer {
                             // 输入类型是ByteBuf, 输出类型也是ByteBuf
                             ch.pipeline().addLast("lengthFieldDecoder", new LengthFieldBasedFrameDecoder(65535, 0, 2, 0, 2));
 
-                            ch.pipeline().addLast("serverHandler", new PushServerHandler());
+                            ch.pipeline().addLast("serverHandler", new PushServerHandler(PushServer.this));
                         }
                     });
 

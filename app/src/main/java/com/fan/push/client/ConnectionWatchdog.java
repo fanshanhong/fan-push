@@ -15,15 +15,9 @@
  */
 package com.fan.push.client;
 
-import java.util.concurrent.TimeUnit;
-
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.util.HashedWheelTimer;
-import io.netty.util.Timeout;
-import io.netty.util.Timer;
-import io.netty.util.TimerTask;
 
 import static com.fan.push.client.ServerConfig.SERVER_IP;
 import static com.fan.push.client.ServerConfig.SERVER_PORT;
@@ -53,7 +47,7 @@ public class ConnectionWatchdog extends ChannelInboundHandlerAdapter {
         boolean doReconnect = PushClient.getInstance().isReconnectNeeded();
         // 需要重连
         if (doReconnect) {
-           PushClient.getInstance().startNewTimerToReconnect();
+           PushClient.getInstance().startTimerToReconnect();
         }
 
         logger.warn("Disconnects with {}, address: {}, reconnect: {}.", ctx.channel(), remoteAddress, doReconnect);

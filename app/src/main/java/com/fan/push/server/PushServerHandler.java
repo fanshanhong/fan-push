@@ -22,6 +22,11 @@ import io.netty.util.Signal;
 import static com.fan.push.util.LoggerUtil.logger;
 
 public class PushServerHandler extends ChannelInboundHandlerAdapter {
+    PushServer pushServer;
+
+    public PushServerHandler(PushServer pushServer) {
+        this.pushServer = pushServer;
+    }
 
     // 用于统计, 当前有多少客户端连接了
     private static final AtomicInteger channelCounter = new AtomicInteger(0);
@@ -33,7 +38,7 @@ public class PushServerHandler extends ChannelInboundHandlerAdapter {
         logger.info("Connects with {} as the {}th channel.", ctx.channel(), count);
 
         // 开启一个线程, 用于从标准输入读取数据并发送到客户端
-        new Thread(new InputScannerRunnable(ctx)).start();
+        new Thread(new InputScannerRunnable(ctx, true, pushServer)).start();
 
         super.channelActive(ctx);
     }
@@ -77,26 +82,39 @@ public class PushServerHandler extends ChannelInboundHandlerAdapter {
                     handshakeSuccessMessage.setMessageType(1001);
                     handshakeSuccessMessage.setStatus(1);
                     ctx.channel().writeAndFlush(Unpooled.wrappedBuffer(GsonUtil.getInstance().toJson(handshakeSuccessMessage).getBytes(CharsetUtil.UTF_8)));
-                } else {
-                    // 握手失败
-                    ChannelHolder.getInstance().offline(ctx.channel());
 
+
+                    // 离线消息发送
+                    pushServer.messageRetryManager.onReConnected(message.getContent());
+                } else {
+                    // 握手失败, 先将Channel 移出管理
+                    ChannelHolder.getInstance().offline(ctx.channel());
+                    // 发送一条握手失败的消息给客户端, 客户端就可以直接关闭自己的连接了
                     Message handshakeFailMessage = new Message();
                     handshakeFailMessage.setMessageType(1001);
                     handshakeFailMessage.setStatus(-1);
                     ctx.channel().writeAndFlush(Unpooled.wrappedBuffer(GsonUtil.getInstance().toJson(handshakeFailMessage).getBytes(CharsetUtil.UTF_8)));
+                    // 服务端也关掉与客户端的连接
+                    // ctx.close();
+                    // 感觉这里会有问题吧.
+                    // 服务端直接调用ctx.close(),  客户端是不是就感知到了? 客户端就直接进入到 channelInactive 中了?
+                    // 这样的话, 客户端应该就收不到 握手失败这个消息了呢?
+                    // 所以这里不要 ctx.close了. 让客户端自己断开连接好了. 客户端断开连接之后, 服务端能感知到(进入channelInactive), 服务端再处理
                 }
 
             } else if (1002 == message.getMessageType()) {
                 ctx.channel().writeAndFlush(Unpooled.wrappedBuffer(GsonUtil.getInstance().toJson(Message.obtainPongMessage()).getBytes(CharsetUtil.UTF_8)));
-
             } else if (1003 == message.getMessageType()) {
 
+            } else if (1004 == message.getMessageType()) {
+                if (message.getStatus() == 1) { // 客户端正常收到
+                    if (pushServer != null) {
+                        pushServer.removeMsgFromRetryManager(message.getTo(), message);
+                    }
+                }
             }
-
         } else {
             logger.warn("Unexpected message type received: {}, channel: {}.", msg.getClass(), ch);
-
             ReferenceCountUtil.release(msg);
         }
     }

@@ -36,7 +36,7 @@ public class HeartBeatClientHandler extends ChannelInboundHandlerAdapter {
                     LoggerUtil.logger.info("规定时间内没收到服务端心跳包响应，进行重连操作");
 
                     // TODO: reconnect
-                    PushClient.getInstance().startNewTimerToReconnect();
+                    PushClient.getInstance().startTimerToReconnect();
                 }
                 break;
 

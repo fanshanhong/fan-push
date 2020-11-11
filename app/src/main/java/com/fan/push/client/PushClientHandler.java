@@ -19,6 +19,7 @@ import com.fan.push.util.StackTraceUtil;
  *
  */
 public class PushClientHandler extends ChannelInboundHandlerAdapter {
+    private int count = 0;
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
@@ -42,6 +43,17 @@ public class PushClientHandler extends ChannelInboundHandlerAdapter {
 
                 // 主动先发一条心跳数据包给服务端
                 ctx.writeAndFlush(Unpooled.wrappedBuffer(GsonUtil.getInstance().toJson(Message.obtainPingMessage()).getBytes(CharsetUtil.UTF_8)));
+            } else if(message.getMessageType() == 1004) {
+                count++;
+                // 发送接收回执
+                message.setStatus(1);
+                // 想要测试消息重发, 这块注释即可
+
+                // 为了测试.  第一条消息, 发送回执, 第二条消息, 不发回执, 看看情况
+                //System.out.println("count:" + count);
+                //if(count%2 == 1) {
+                    ctx.writeAndFlush(Unpooled.wrappedBuffer(GsonUtil.getInstance().toJson(message).getBytes(CharsetUtil.UTF_8)));
+                //}
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -66,7 +78,7 @@ public class PushClientHandler extends ChannelInboundHandlerAdapter {
     public void channelActive(final ChannelHandlerContext ctx) throws Exception {
         LoggerUtil.logger.info("channelActive");
         // 开启一个线程, 不断从终端输入读取, 并发送到服务端
-        new Thread(new InputScannerRunnable(ctx)).start();
+        //new Thread(new InputScannerRunnable(ctx, false)).start();
         ctx.fireChannelActive();
     }
 
