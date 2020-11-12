@@ -71,13 +71,9 @@ public class MessageLooper implements TimerTask {
                     // 5次都没成功, 认为客户端掉线了
                     Channel channelByUserId = ChannelHolder.getInstance().getChannelByUserId(userId);
                     ChannelHolder.getInstance().offline(channelByUserId);
+
+                    messageRetryManager.onUserOffline(userId);
                     channelByUserId.close();
-
-                    // 把userId 对应的全部消息都写入数据库, 等上线了再一起发
-                    messageRetryManager.saveAllMessageToDB(messages);
-
-                    // 然后把这个userId 从map中移除
-                    messageRetryManager.removeUser(userId);
                 }
             } else { // lastFirstMsgId 已经被客户端成功接收了
                 lastFirstMsgId = currentFirstMsgId;

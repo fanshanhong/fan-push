@@ -3,10 +3,8 @@ package com.fan.push.client;
 import com.fan.push.message.Message;
 import com.fan.push.server.ChannelHolder;
 import com.fan.push.server.PushServer;
-import com.fan.push.util.GsonUtil;
 
 import java.util.Scanner;
-import java.util.UUID;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
@@ -42,6 +40,11 @@ public class InputScannerRunnable implements Runnable {
 
                 // 服务端
                 if (isServer) {
+
+                    // TODO: 要关闭 与客户端的连接了, 如果还有客户端未收到的消息, 就要存在数据库了
+                    String userId = ChannelHolder.getInstance().getUserIdByChannel(ctx.channel());
+                    pushServer.messageRetryManager.onUserOffline(userId);
+
                     ChannelHolder.getInstance().offline(ctx.channel());
                     ctx.close();
                 } else {// 客户端

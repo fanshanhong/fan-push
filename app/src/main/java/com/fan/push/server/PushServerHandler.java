@@ -23,7 +23,7 @@ import static com.fan.push.client.PushClient.MY_CLIENT_USER_ID;
 import static com.fan.push.util.LoggerUtil.logger;
 
 public class PushServerHandler extends ChannelInboundHandlerAdapter {
-    PushServer pushServer;
+    private PushServer pushServer;
 
     public PushServerHandler(PushServer pushServer) {
         this.pushServer = pushServer;
@@ -49,6 +49,9 @@ public class PushServerHandler extends ChannelInboundHandlerAdapter {
         int count = channelCounter.getAndDecrement();
 
         logger.warn("Disconnects with {} as the {}th channel.", ctx.channel(), count);
+
+        String userId = ChannelHolder.getInstance().getUserIdByChannel(ctx.channel());
+        pushServer.messageRetryManager.onUserOffline(userId);
 
         ChannelHolder.getInstance().offline(ctx.channel());
         ctx.close();
@@ -95,7 +98,7 @@ public class PushServerHandler extends ChannelInboundHandlerAdapter {
                     ctx.channel().writeAndFlush(Unpooled.wrappedBuffer(GsonUtil.getInstance().toJson(handshakeSuccessMessage).getBytes(CharsetUtil.UTF_8)));
 
                     // 刚刚握手成功, 把之前所有的离线消息发送
-                    pushServer.messageRetryManager.onReConnected(message.getFrom());
+                    pushServer.messageRetryManager.onUserOnline(message.getFrom());
                 } else {
                     // 握手失败, 先将Channel 移出管理
                     ChannelHolder.getInstance().offline(ctx.channel());

@@ -35,6 +35,25 @@ public class ChannelHolder {
         return (channel.hasAttr(key) || channel.attr(key).get() != null);//netty移除了这个map的remove方法,这里的判断谨慎一点
     }
 
+
+    public String getUserIdByChannel(Channel channel) {
+        AttributeKey<String> key = AttributeKey.valueOf("user");
+        if (channel.hasAttr(key) || channel.attr(key).get() != null) {
+            return channel.attr(key).get();
+        }
+        return null;
+    }
+
+    /**
+     * 根据用户id获取该用户的通道
+     *
+     * @param userId
+     * @return
+     */
+    public Channel getChannelByUserId(String userId) {
+        return this.channelMap.get(userId);
+    }
+
     /**
      * 上线一个用户, 要将这个Channel 加入到 ChannelMap 中进行管理
      *
@@ -73,16 +92,6 @@ public class ChannelHolder {
             channelMap.remove(userId);
         }
         channel.attr(key).set("");
-    }
-
-    /**
-     * 根据用户id获取该用户的通道
-     *
-     * @param userId
-     * @return
-     */
-    public Channel getChannelByUserId(String userId) {
-        return this.channelMap.get(userId);
     }
 
     /**

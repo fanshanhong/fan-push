@@ -65,7 +65,7 @@ public class PushServer {
                         protected void initChannel(SocketChannel ch) throws Exception {
 
                             ch.pipeline().addLast(new IdleStateHandler(23, 0, 0, TimeUnit.SECONDS));
-                            ch.pipeline().addLast(new HeartBeatServerHandler());
+                            ch.pipeline().addLast(new HeartBeatServerHandler(PushServer.this));
 
                             // LengthFieldPrepender 是个 MessageToMessageEncoder<ByteBuf>, 编码, 出站
                             // 输入类型是ByteBuf, 输出类型也是ByteBuf

@@ -5,6 +5,8 @@ import com.fan.push.message.Message;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * 消息重发管理器
@@ -31,6 +33,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * 服务器由于网络原因没有收到回执，这条消息的回执丢了，服务器会再把这条消息发送第二次，客户端这次会收到重复的消息，这时候客户端怎么处理呢？？继续显示这条消息显然不正确，客户端需要验证这条消息是否收到，进行合法性进行验证。这里需要用到消息唯一标示。
  */
 public class MessageRetryManager {
+
+    private ExecutorService executorService = Executors.newCachedThreadPool();
 
     private PushServer pushServer;
 
@@ -86,25 +90,69 @@ public class MessageRetryManager {
 
     }
 
-    void removeUser(String userId) {
+    public void removeUser(String userId) {
         retryMessageMap.remove(userId);
     }
 
     /**
      * 重连成功回调，重连并握手成功时，重发消息发送超时管理器中所有的消息
      */
-    public synchronized void onReConnected(String userId) {
+    public synchronized void onUserOnline(String userId) {
 
-//        // 要从数据库里读出来
-//        List<Message> messageList = getRetryMessageMap().get(userId);
-//
-//        // 遍历, 一起发.
-//        for (Message message : messageList) {
-//            getPushServer().sendMsg(userId, message, true);
-//        }
+        // 要从数据库里读出来
+        List<Message> messageList = loadAllOfflineMessageFromDB(userId);
+
+        // 遍历, 一起发.
+        for (Message message : messageList) {
+            getPushServer().sendMsg(userId, message, true);
+        }
     }
 
-    public void saveAllMessageToDB(List<Message> messageList) {
+    private List<Message> loadAllOfflineMessageFromDB(String userId) {
+
+        // 从数据库查询出这个用户的离线消息
+        List<Message> messageList = new ArrayList<>();
+
+        return messageList;
+    }
+
+
+    public synchronized void onUserOffline(final String userId) {
+        executorService.execute(new Runnable() {
+            @Override
+            public void run() {
+                // 把userId 对应的全部消息都写入数据库, 等上线了再一起发
+                pushServer.messageRetryManager.saveOfflineMessage(userId);
+
+                // 然后把这个userId 从map中移除
+                pushServer.messageRetryManager.removeUser(userId);
+            }
+        });
+    }
+
+    /**
+     * 存储离线消息
+     *
+     * @param userId
+     */
+    private void saveOfflineMessage(String userId) {
+        List<Message> messageList = retryMessageMap.get(userId);
+
+
+        if (messageList == null || messageList.size() == 0) {
+            // 没有需要存储的离线消息
+            return;
+        }
+
+        // 数据库里有, 就更新, 没有就插入
+        saveMessageToDB(messageList);
+
+    }
+
+    private void saveMessageToDB(List<Message> messageList) {
+
+        // 批量更新和插入
+
 
     }
 
