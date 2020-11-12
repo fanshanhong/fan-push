@@ -12,6 +12,20 @@ import io.netty.util.Timer;
 import io.netty.util.TimerTask;
 import io.netty.util.internal.StringUtil;
 
+
+/**
+ * 消息轮询器
+ * <p>
+ * <p>
+ * 思路:
+ * 1, 为每一个用户(userId)分配一个轮询器
+ * 2, 当服务端给客户端发送消息的时候, 要把消息添加到超时管理器中
+ * 3, 在 MessageRetryManager 的 add 方法中, 如果是个新的用户, 就给他分配一个轮询器, 轮询器每10秒去检查一下这个用户有没有消息需要重发
+ * 4, 如果没有, 就拉到. 等10秒再来看看.  如果有, 就开启定时器开始重发(是把所有没接收成功的都再发一遍).
+ * 5, 如果客户端收到了, 就返回给服务器接收回执, 服务器收到接收回执, 就把消息从 超时管理器中 移除
+ * 6, 如果发了5次, 客户端依然没有收到, 就认为客户端已经断线了. 此时, 将与客户端的连接断开, 并且, 将没发成功的消息写入数据库, 作为离线消息.
+ * 7, 等下次客户端上线了, 统一把所有的离线消息发给客户端
+ */
 public class MessageLooper implements TimerTask {
 
     private String userId;
@@ -23,7 +37,7 @@ public class MessageLooper implements TimerTask {
     private static final int MAX_RETRY_COUNT = 5;
 
     /**
-     * const
+     * constructor
      *
      * @param userId
      */
@@ -64,7 +78,13 @@ public class MessageLooper implements TimerTask {
 
             System.out.println("last: " + lastFirstMsgId + "   current:" + currentFirstMsgId + "  retryCount:" + retryCount);
 
-            if (lastFirstMsgId.equals(currentFirstMsgId)) { // 之前的没成功
+
+            // 这里通过 lastFirstMsgId 来判断之前的第一条消息是否被成功接收了
+            // 如果 lastFirstMsgId 被接收成功的话, 就从超时管理器里移除了
+            // lastFirstMsgId.equals(currentFirstMsgId) 代表之前的没发成功, 这个last消息还存在与超时管理器中
+
+            if (lastFirstMsgId.equals(currentFirstMsgId)) {
+                // 之前的重发没成功, 加长延时, 再次重发
                 if (retryCount < MAX_RETRY_COUNT) {
                     retryCount++;
                 } else {
@@ -75,11 +95,11 @@ public class MessageLooper implements TimerTask {
                     messageRetryManager.onUserOffline(userId);
                     channelByUserId.close();
                 }
-            } else { // lastFirstMsgId 已经被客户端成功接收了
+            } else { // lastFirstMsgId 已经被客户端成功接收了, 那就更新 last, 并把计数清零
                 lastFirstMsgId = currentFirstMsgId;
                 retryCount = 0;
             }
-            int delay = retryCount * 4;//第一次是0,  0*4=0
+            int delay = retryCount * 4;//第一次是0,  0*4=0, 也就是说第一次不用延时的.  因为第一次是10秒轮询, 不需要延时
             System.out.println("delay:" + delay);
             timer.newTimeout(new TimerTask() {
                 @Override
@@ -96,7 +116,7 @@ public class MessageLooper implements TimerTask {
 
     private void retrySendMsg() {
         System.out.println("retrySendMsg");
-        // 再判断一下这个用户是否有需要重发的消息
+        // 这个方法是延时之后进入的, 因此再次确认一下这个用户是否有需要重发的消息
         List<Message> messageList = messageRetryManager.getRetryMessageMap().get(userId);
         if (messageList == null || messageList.size() == 0) {
             // 重发队列已经为空, 不需要重发了
@@ -107,10 +127,19 @@ public class MessageLooper implements TimerTask {
             return;
         }
 
+        // 这个方法是延时之后进入的, 在延时期间, 超时管理器中的数据可能有变化(有可能有新发的消息, 也有可能有客户端收到消息后,从超时管理器中移除消息了)
+        // 因此, 这里再次更新一下 lastFirstMsgId
         lastFirstMsgId = messageList.get(0).getMessageId();
-        // 确实要发
+        // 确实有消息需要重发
         for (Message message : messageList) {
             messageRetryManager.getPushServer().sendMsg(userId, message, false);
+        }
+
+        // 发完, 休息一下, 给客户端回执留出时间
+        try {
+            Thread.sleep(5000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
         checkNeedRetry();
     }
