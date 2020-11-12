@@ -111,7 +111,7 @@ public class MessageRetryManager {
 
     private List<Message> loadAllOfflineMessageFromDB(String userId) {
 
-        // 从数据库查询出这个用户的离线消息
+        // TODO:从数据库查询出这个用户的离线消息
         List<Message> messageList = new ArrayList<>();
 
         return messageList;
@@ -147,12 +147,11 @@ public class MessageRetryManager {
 
         // 数据库里有, 就更新, 没有就插入
         saveMessageToDB(messageList);
-
     }
 
     private void saveMessageToDB(List<Message> messageList) {
 
-        // 批量更新和插入
+        // TODO:批量更新和插入
 
 
     }
