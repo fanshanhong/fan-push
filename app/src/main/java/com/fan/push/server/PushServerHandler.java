@@ -19,6 +19,7 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.Signal;
 
+import static com.fan.push.client.PushClient.MY_CLIENT_USER_ID;
 import static com.fan.push.util.LoggerUtil.logger;
 
 public class PushServerHandler extends ChannelInboundHandlerAdapter {
@@ -67,31 +68,39 @@ public class PushServerHandler extends ChannelInboundHandlerAdapter {
 
 
             Message message = GsonUtil.getInstance().fromJson(messageStr, Message.class);
+
+            if (message == null) {
+                return;
+            }
+
+            // 先判断一下消息是不是给自己的?
+            if (!"server".equals(message.getTo())) {
+                // 直接丢弃了, 也不需要传播
+                return;
+            }
+
             if (1001 == message.getMessageType()) {// 握手消息
 
 
-                if (message.getContent().equals("username=111&password=222")) {
+                if (message.getFrom().equals(MY_CLIENT_USER_ID)) {
 
                     // 成功
                     // 先把channel 加入Map 进行管理
                     // 回复一个握手成功
 
-                    ChannelHolder.getInstance().online(ctx.channel(), message.getContent());
+                    ChannelHolder.getInstance().online(ctx.channel(), message.getFrom());
 
-                    Message handshakeSuccessMessage = new Message();
-                    handshakeSuccessMessage.setMessageType(1001);
+                    Message handshakeSuccessMessage = new Message(1001, "server", MY_CLIENT_USER_ID);
                     handshakeSuccessMessage.setStatus(1);
                     ctx.channel().writeAndFlush(Unpooled.wrappedBuffer(GsonUtil.getInstance().toJson(handshakeSuccessMessage).getBytes(CharsetUtil.UTF_8)));
 
-
-                    // 离线消息发送
-                    pushServer.messageRetryManager.onReConnected(message.getContent());
+                    // 刚刚握手成功, 把之前所有的离线消息发送
+                    pushServer.messageRetryManager.onReConnected(message.getFrom());
                 } else {
                     // 握手失败, 先将Channel 移出管理
                     ChannelHolder.getInstance().offline(ctx.channel());
                     // 发送一条握手失败的消息给客户端, 客户端就可以直接关闭自己的连接了
-                    Message handshakeFailMessage = new Message();
-                    handshakeFailMessage.setMessageType(1001);
+                    Message handshakeFailMessage = new Message(1001, "server", MY_CLIENT_USER_ID);
                     handshakeFailMessage.setStatus(-1);
                     ctx.channel().writeAndFlush(Unpooled.wrappedBuffer(GsonUtil.getInstance().toJson(handshakeFailMessage).getBytes(CharsetUtil.UTF_8)));
                     // 服务端也关掉与客户端的连接
@@ -103,9 +112,11 @@ public class PushServerHandler extends ChannelInboundHandlerAdapter {
                 }
 
             } else if (1002 == message.getMessageType()) {
-                ctx.channel().writeAndFlush(Unpooled.wrappedBuffer(GsonUtil.getInstance().toJson(Message.obtainPongMessage()).getBytes(CharsetUtil.UTF_8)));
+                Message pongMessage = Message.obtainPongMessage();
+                pongMessage.setTo(message.getFrom());
+                ctx.channel().writeAndFlush(Unpooled.wrappedBuffer(GsonUtil.getInstance().toJson(pongMessage).getBytes(CharsetUtil.UTF_8)));
             } else if (1003 == message.getMessageType()) {
-
+                // 服务端不会收到pong消息
             } else if (1004 == message.getMessageType()) {
                 if (message.getStatus() == 1) { // 客户端正常收到
                     if (pushServer != null) {

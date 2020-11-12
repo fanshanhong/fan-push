@@ -19,6 +19,7 @@ import com.fan.push.util.StackTraceUtil;
  *
  */
 public class PushClientHandler extends ChannelInboundHandlerAdapter {
+
     private int count = 0;
 
     @Override
@@ -33,26 +34,41 @@ public class PushClientHandler extends ChannelInboundHandlerAdapter {
 
             //握手失败且返回了消息一定是服务端认证没通过 所以这里需要关闭客户端, 也不需要重连, 因为账号密码都错了!
             Message message = GsonUtil.getInstance().fromJson(msgStr, Message.class);
+
+            if (message == null) {
+                return;
+            }
+
+            // 看一下是不是给自己的消息?
+            if (!PushClient.MY_CLIENT_USER_ID.equals(message.getTo())) {
+                return;
+            }
+
             if (message.getMessageType() == 1001 && message.getStatus() == -1) {
+                // 握手失败
                 PushClient.getInstance().close(ctx.channel());
             } else if (message.getMessageType() == 1001 && message.getStatus() == 1) {
-                // 握手成功, 开始心跳, 再add IdleStateHandler才对
+                // 握手成功, 开始心跳, 此时再add IdleStateHandler才对
                 for (ChannelHandler handler : ChannelHandlerHolder.heartbeatHandlers()) {
                     ctx.pipeline().addFirst(handler.getClass().getSimpleName(), handler);
                 }
 
                 // 主动先发一条心跳数据包给服务端
-                ctx.writeAndFlush(Unpooled.wrappedBuffer(GsonUtil.getInstance().toJson(Message.obtainPingMessage()).getBytes(CharsetUtil.UTF_8)));
-            } else if(message.getMessageType() == 1004) {
+                Message pingMessage = Message.obtainPingMessage();
+                pingMessage.setFrom(PushClient.MY_CLIENT_USER_ID);
+                ctx.writeAndFlush(Unpooled.wrappedBuffer(GsonUtil.getInstance().toJson(pingMessage).getBytes(CharsetUtil.UTF_8)));
+            } else if (message.getMessageType() == 1004) {
                 count++;
-                // 发送接收回执
-                message.setStatus(1);
-                // 想要测试消息重发, 这块注释即可
+                // 构造一条接收回执消息
+                Message reportBackMessage = new Message(1004, PushClient.MY_CLIENT_USER_ID, "server");
+                reportBackMessage.setStatus(1);
 
+                // 想要测试消息重发, 这块注释即可
                 // 为了测试.  第一条消息, 发送回执, 第二条消息, 不发回执, 看看情况
                 //System.out.println("count:" + count);
                 //if(count%2 == 1) {
-                    ctx.writeAndFlush(Unpooled.wrappedBuffer(GsonUtil.getInstance().toJson(message).getBytes(CharsetUtil.UTF_8)));
+                // 发送接收回执
+                ctx.writeAndFlush(Unpooled.wrappedBuffer(GsonUtil.getInstance().toJson(reportBackMessage).getBytes(CharsetUtil.UTF_8)));
                 //}
             }
         } catch (Exception e) {

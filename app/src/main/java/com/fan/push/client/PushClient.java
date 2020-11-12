@@ -48,6 +48,8 @@ public class PushClient {
     }
 
 
+    public static final String MY_CLIENT_USER_ID = "fanshanhong";
+
     // 连接状态：连接中
     public static final int CONNECT_STATE_CONNECTING = 0;
     // 连接状态：连接成功
@@ -118,9 +120,7 @@ public class PushClient {
                         logger.info("连接成功");
                         connectStatus = CONNECT_STATE_SUCCESSFUL;
                         // 构造一条握手消息, 并发送
-                        Message handshakeMessage = new Message();
-                        handshakeMessage.setMessageType(1001);
-                        handshakeMessage.setContent("username=111&password=222");
+                        Message handshakeMessage = new Message(1001,  MY_CLIENT_USER_ID, "server");
                         channel.writeAndFlush(Unpooled.wrappedBuffer(GsonUtil.getInstance().toJson(handshakeMessage).getBytes(CharsetUtil.UTF_8)));
 
                     } else {

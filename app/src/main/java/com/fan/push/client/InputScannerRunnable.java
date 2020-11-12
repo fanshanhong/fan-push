@@ -51,12 +51,8 @@ public class InputScannerRunnable implements Runnable {
                 return;
             }
 
-            Message message = new Message();
-            message.setMessageType(1004);
+            Message message = new Message(1004, "server", PushClient.MY_CLIENT_USER_ID);
             message.setContent(line);
-            message.setStatus(1);
-            message.setMessageId(UUID.randomUUID().toString());
-            message.setTo("username=111&password=222");
 
             if (isServer) {
                 // 找到是发给谁的

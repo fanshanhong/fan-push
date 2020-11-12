@@ -8,21 +8,22 @@ import java.util.UUID;
  * <p>
  * <p>
  * 按照流程顺序, 梳理一下, 我们一共需要这几种类型的消息:
- *
- *
+ * <p>
+ * <p>
  * 1, 最开始客户端连接后, 客户端需要给服务端发送一个握手消息(1001) 所需字段:  messageType=1001 from=客户端userId timestamp
  * 2, 服务端收到客户端的握手消息后, 如果验证成功, 返回给客户端  1001 status=1  from=server to=客户端userId timestamp
- *                            如果验证失败, 返回给客户端  1001 status=-1 from=server to=客户端userId timestamp
+ * 如果验证失败, 返回给客户端  1001 status=-1 from=server to=客户端userId timestamp
  * 3, 客户端端收到 握手消息(1001) status=-1, 就知道自己握手都没成功, 直接关闭连接
- *              握手消息(1001) status=1,  就知道自己握手成功, 开始后续的逻辑:心跳
- *
+ * 握手消息(1001) status=1,  就知道自己握手成功, 开始后续的逻辑:心跳
+ * <p>
  * 4, 客户端发送的心跳消息(ping),   messageType=1002, from=客户端userId, to=server, timestamp
  * 5, 服务端接收到心跳消息(ping)后, 返回响应消息(pong),  messageType=1003, from=server, to=客户端userId, timestamp
- *
+ * <p>
  * 6, 服务端给客户端推送消息(1004), messageType=1004, messageId, content, from=server, to=客户端userId, timestamp
  * 7, 如果客户端收到服务器的推送消息, 发送已读回执. messageType=1004, messageId, from=客户端userId, to=server, status=1, timestamp
- *
- *
+ * <p>
+ * Next, 1, 按照这个消息规则调整
+ * 2, 完成离线消息功能
  */
 public class Message {
 
@@ -42,17 +43,17 @@ public class Message {
     // 时间戳
     private long timestamp;
 
-    public Message(int messageType, String messageId, String to, String from) {
+    public Message(int messageType, String from, String to) {
         this.messageType = messageType;
-        this.messageId = messageId;
-        this.to = to;
+        this.messageId = UUID.randomUUID().toString();
         this.from = from;
+        this.to = to;
         this.timestamp = System.currentTimeMillis();
     }
 
-    private static Message pingMessage = new Message(1002, UUID.randomUUID().toString(), "client", "server");
+    private static Message pingMessage = new Message(1002, "client", "server");
 
-    private static Message pongMessage = new Message(1003, UUID.randomUUID().toString(), "server", "client");
+    private static Message pongMessage = new Message(1003, "server", "client");
 
 
     public static Message obtainPingMessage() {
