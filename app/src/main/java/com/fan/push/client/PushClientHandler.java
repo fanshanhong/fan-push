@@ -107,6 +107,12 @@ public class PushClientHandler extends ChannelInboundHandlerAdapter {
 
                 // TODO:自己处理这条消息
                 System.out.println("服务器说:" + message.getContent());
+
+                // 想说:
+                // 客户端收到消息之后, 是不是需要按照时间戳排序一下再显示的? 应该不是按照哪条先收到就哪条展示在前面吧?
+                // 好像没关系
+                // https://blog.csdn.net/lihuayong/article/details/108218729
+                // http://www.52im.net/forum.php?mod=viewthread&tid=1088
             }
         } catch (Exception e) {
             e.printStackTrace();

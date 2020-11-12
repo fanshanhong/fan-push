@@ -28,10 +28,9 @@ import java.util.concurrent.Executors;
  * 另一个问题:
  * 服务器向客户端发送消息1次，客户端向服务器发送这条消息的回执。
  * 服务器由于网络原因没有收到回执，这条消息的回执丢了，服务器会再把这条消息发送第二次，客户端这次会收到重复的消息，这时候客户端怎么处理呢？？继续显示这条消息显然不正确，客户端需要验证这条消息是否收到，进行合法性进行验证。这里需要用到消息唯一标示(messageId)。
- *
+ * <p>
  * 目前的想法:客户端维护一个大一点的Set,里面存放 收到的 类型为1004的消息的messageId.
  * 当有消息来, 先判断Set里有没有这个messageId, 如果有, 就代表最近已经收到过了, 直接丢弃这条消息了
- *
  */
 public class MessageRetryManager {
 
@@ -111,8 +110,10 @@ public class MessageRetryManager {
 
     private List<Message> loadAllOfflineMessageFromDB(String userId) {
 
-        // TODO:从数据库查询出这个用户的离线消息
+        // TODO:从数据库查询出这个用户的所有离线消息, 放在超时管理器中, 然后要把离线消息从数据库表中移除了
         List<Message> messageList = new ArrayList<>();
+        messageList.addAll(mookDBMessageList);
+        mookDBMessageList.clear();
 
         return messageList;
     }
@@ -152,8 +153,20 @@ public class MessageRetryManager {
     private void saveMessageToDB(List<Message> messageList) {
 
         // TODO:批量更新和插入
-
-
+        for (Message message : messageList) {
+            if (mookDBMessageList.contains(message)) { // 包含, 就代表数据存在这个id的 消息, 需要更新
+                // 这里contains 比较的只是messageId 和 messageType
+                // 除了这两个字段, 其他字段可能不同, 因此先remove 一下, 再add一下, 就相当于是数据的更新了
+                int index = mookDBMessageList.indexOf(message);
+                mookDBMessageList.remove(index);
+                mookDBMessageList.add(index, message);
+            } else { // 插入
+                mookDBMessageList.add(message);
+            }
+        }
     }
+
+    // 用于模拟数据库的集合
+    private List<Message> mookDBMessageList = new ArrayList<>();
 
 }
