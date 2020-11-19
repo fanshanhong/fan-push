@@ -20,16 +20,16 @@ import java.io.IOException;
 import java.io.PrintStream;
 
 /**
- * jupiter
- * org.jupiter.common.util
- *
- * @author jiachun.fjc
+ * @Description: 堆栈跟踪信息工具类
+ * @Author: fan
+ * @Date: 2020-10-19 11:19
+ * @Modify:
  */
 public final class StackTraceUtil {
 
     public static String stackTrace(Throwable t) {
         if (t == null) {
-            return "null";
+            return "the Throwable is null";
         }
 
         ByteArrayOutputStream out = new ByteArrayOutputStream();
