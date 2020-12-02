@@ -2,6 +2,7 @@ package com.fan.push.server;
 
 import com.fan.push.message.Message;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -14,27 +15,40 @@ import io.netty.util.internal.StringUtil;
 
 
 /**
- * 消息轮询器
- * <p>
- * <p>
+ * @Description: 消息轮询器
+ *
  * 思路:
+ *
  * 1, 为每一个用户(userId)分配一个轮询器
  * 2, 当服务端给客户端发送消息的时候, 要把消息添加到超时管理器中
  * 3, 在 MessageRetryManager 的 add 方法中, 如果是个新的用户, 就给他分配一个轮询器, 轮询器每10秒去检查一下这个用户有没有消息需要重发
- * 4, 如果没有, 就拉到. 等10秒再来看看.  如果有, 就开启定时器开始重发(是把所有没接收成功的都再发一遍).
+ * 4, 如果没有, 就算了. 等10秒再来看看.  如果有, 就开启定时器开始重发(是把所有没接收成功的都再发一遍).
  * 5, 如果客户端收到了, 就返回给服务器接收回执, 服务器收到接收回执, 就把消息从 超时管理器中 移除
  * 6, 如果发了5次, 客户端依然没有收到, 就认为客户端已经断线了. 此时, 将与客户端的连接断开, 并且, 将没发成功的消息写入数据库, 作为离线消息.
  * 7, 等下次客户端上线了, 统一把所有的离线消息发给客户端
+ * @Author: fan
+ * @Date: 2020-9-19 11:19
+ * @Modify:
  */
 public class MessageLooper implements TimerTask {
 
+    // 标识这个MessageLooper 是属于哪个用户
     private String userId;
+
+    // Netty 提供的定时器
     private Timer timer = new HashedWheelTimer();
+
+    // 持有一个 MessageRetryManager 的引用,  因为这个轮询器就是要从 MessageRetryManager 里取数据
     private MessageRetryManager messageRetryManager;
 
     private String lastFirstMsgId = "";
+    // 重试次数
     private int retryCount = -1;
+    // 最大重试次数
     private static final int MAX_RETRY_COUNT = 5;
+
+    // 正在发送的, 也就是尚未接收被客户端接收到的, 也就是需要重发的  消息的List
+    private List<Message> needRetryMessage = new ArrayList<>();
 
     /**
      * constructor
@@ -52,6 +66,23 @@ public class MessageLooper implements TimerTask {
         this.messageRetryManager = messageRetryManager;
     }
 
+
+    //=========== getters =======
+
+    public List<Message> getNeedRetryMessage() {
+        if (needRetryMessage == null) {
+            needRetryMessage = new ArrayList<>();
+        }
+        return needRetryMessage;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    /**
+     * 开始轮询
+     */
     public void loop() {
         // 10秒来检测一次, 有没有需要重发的消息
         timer.newTimeout(this, 10, TimeUnit.SECONDS);
@@ -60,16 +91,17 @@ public class MessageLooper implements TimerTask {
     @Override
     public void run(Timeout timeout) throws Exception {
         System.out.println("in MessageLoop run");
+        checkNeedRetry();
     }
 
+    /**
+     * 检查是否有重发消息
+     */
     private void checkNeedRetry() {
-        System.out.println("in checkNeedRetry()");
-        // 这个userId 有没有需要重发的
-        final List<Message> messages = messageRetryManager.getRetryMessageMap().get(userId);
-        System.out.println(messages);
+        final List<Message> messages = needRetryMessage;
 
         if (messages != null && messages.size() > 0) {
-            // 代表userId 这个用户, 有需要重发消息, 进行重发
+            // 代表 userId 这个用户, 有需要重发消息, 进行重发
 
             // 第一条消息
             final Message currentFirstMessage = messages.get(0);
@@ -89,11 +121,15 @@ public class MessageLooper implements TimerTask {
                     retryCount++;
                 } else {
                     // 5次都没成功, 认为客户端掉线了
-                    Channel channelByUserId = ChannelHolder.getInstance().getChannelByUserId(userId);
-                    ChannelHolder.getInstance().offline(channelByUserId);
+                    Channel channel = ChannelHolder.getInstance().getChannelByUserId(userId);
+                    ChannelHolder.getInstance().offline(channel);
 
                     messageRetryManager.onUserOffline(userId);
-                    channelByUserId.close();
+                    channel.close();
+
+                    // 下线了, 就不要再轮询了; onUserOffline方法中做了这些处理
+                    return;
+
                 }
             } else { // lastFirstMsgId 已经被客户端成功接收了, 那就更新 last, 并把计数清零
                 lastFirstMsgId = currentFirstMsgId;
@@ -108,7 +144,7 @@ public class MessageLooper implements TimerTask {
                 }
             }, delay, TimeUnit.SECONDS);
         } else {
-            // 没, 继续监测
+            // 代表 userId 这个用户, 没有消息需要重发, 继续监测即可
             loop();
         }
     }
@@ -117,12 +153,11 @@ public class MessageLooper implements TimerTask {
     private void retrySendMsg() {
         System.out.println("retrySendMsg");
         // 这个方法是延时之后进入的, 因此再次确认一下这个用户是否有需要重发的消息
-        List<Message> messageList = messageRetryManager.getRetryMessageMap().get(userId);
+        List<Message> messageList = needRetryMessage;
         if (messageList == null || messageList.size() == 0) {
             // 重发队列已经为空, 不需要重发了
 
-            // 正常10秒轮询就好了
-            // 继续监测
+            // 继续监测, 正常10秒轮询就好了
             loop();
             return;
         }
@@ -142,5 +177,19 @@ public class MessageLooper implements TimerTask {
             e.printStackTrace();
         }
         checkNeedRetry();
+    }
+
+    /**
+     * 清除掉所有的消息
+     */
+    public void removeAllMessage() {
+        needRetryMessage.clear();
+    }
+
+    /**
+     * 停止轮询, 一般用于客户端掉线了
+     */
+    public void stopLoop() {
+        timer.stop();
     }
 }

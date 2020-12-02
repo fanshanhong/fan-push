@@ -5,6 +5,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import io.netty.channel.Channel;
 import io.netty.util.AttributeKey;
 
+/**
+ * @Description: 用于维护全部与客户端连接的 Channel 的容器
+ * @Author: fan
+ * @Date: 2020-9-19 11:19
+ * @Modify:
+ */
 public class ChannelHolder {
 
     private static ChannelHolder instance = new ChannelHolder();
@@ -20,11 +26,11 @@ public class ChannelHolder {
 
     // https://www.cnblogs.com/liangshu/p/12459657.html
 
-    // userId <==> channel 映射关系
+    // userId(String) <==> channel(Channel) 映射关系
     private final ConcurrentHashMap<String, Channel> channelMap = new ConcurrentHashMap<>();
 
     /**
-     * 判断一个通道是否有用户在使用
+     * 判断一个通道是否有客户端在使用
      * 可做信息转发时判断该通道是否合法
      *
      * @param channel
@@ -36,6 +42,12 @@ public class ChannelHolder {
     }
 
 
+    /**
+     * 通过 channel 对象获取客户端的userId
+     *
+     * @param channel
+     * @return
+     */
     public String getUserIdByChannel(Channel channel) {
         AttributeKey<String> key = AttributeKey.valueOf("user");
         if (channel.hasAttr(key) || channel.attr(key).get() != null) {
@@ -45,7 +57,7 @@ public class ChannelHolder {
     }
 
     /**
-     * 根据用户id获取该用户的通道
+     * 根据客户端的 userId 获取客户端的通道
      *
      * @param userId
      * @return
@@ -55,7 +67,7 @@ public class ChannelHolder {
     }
 
     /**
-     * 上线一个用户, 要将这个Channel 加入到 ChannelMap 中进行管理
+     * 上线一个客户端, 要将这个Channel 加入到 ChannelMap 中进行管理
      *
      * @param channel
      * @param userId
@@ -69,7 +81,7 @@ public class ChannelHolder {
     }
 
     /**
-     * 下线一个用户, 将Channel 从 ChannelMap 中移除
+     * 下线一个客户端, 将Channel 从 ChannelMap 中移除
      *
      * @param channel
      */
@@ -95,7 +107,7 @@ public class ChannelHolder {
     }
 
     /**
-     * 判断一个用户是否在线
+     * 判断一个客户端是否在线
      *
      * @param userId
      * @return
