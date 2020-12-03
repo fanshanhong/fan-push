@@ -23,10 +23,13 @@ import static com.fan.push.client.ServerConfig.SERVER_IP;
 import static com.fan.push.client.ServerConfig.SERVER_PORT;
 import static com.fan.push.util.LoggerUtil.logger;
 
-
+/**
+ * @Description: 链路检测狗
+ * @Author: fan
+ * @Date: 2020-9-19 21:19
+ * @Modify:
+ */
 public class ConnectionWatchdog extends ChannelInboundHandlerAdapter {
-
-    private String remoteAddress = SERVER_IP+":"+SERVER_PORT;
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
@@ -47,10 +50,10 @@ public class ConnectionWatchdog extends ChannelInboundHandlerAdapter {
         boolean doReconnect = PushClient.getInstance().isReconnectNeeded();
         // 需要重连
         if (doReconnect) {
-           PushClient.getInstance().startTimerToReconnect();
+            PushClient.getInstance().startTimerToReconnect();
         }
 
-        logger.warn("Disconnects with {}, address: {}, reconnect: {}.", ctx.channel(), remoteAddress, doReconnect);
+        logger.warn("Disconnects with {}, address: {}, reconnect: {}.", ctx.channel(), SERVER_IP + ":" + SERVER_PORT, doReconnect);
 
         ctx.fireChannelInactive();
     }

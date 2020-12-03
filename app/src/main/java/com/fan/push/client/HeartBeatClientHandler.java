@@ -11,6 +11,12 @@ import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.util.CharsetUtil;
 
+/**
+ * @Description: 心跳处理器
+ * @Author: fan
+ * @Date: 2020-9-19 21:19
+ * @Modify:
+ */
 public class HeartBeatClientHandler extends ChannelInboundHandlerAdapter {
 
     @Override

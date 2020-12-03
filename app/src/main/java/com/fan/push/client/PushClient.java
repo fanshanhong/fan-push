@@ -28,6 +28,12 @@ import static com.fan.push.client.ServerConfig.SERVER_IP;
 import static com.fan.push.client.ServerConfig.SERVER_PORT;
 import static com.fan.push.util.LoggerUtil.logger;
 
+/**
+ * @Description: 客户端启动类
+ * @Author: fan
+ * @Date: 2020-9-19 21:19
+ * @Modify:
+ */
 public class PushClient {
 
     public static void main(String[] args) {
@@ -48,6 +54,7 @@ public class PushClient {
     }
 
 
+    // 客户端的 userId, 目前就这一个, 用于测试
     public static final String MY_CLIENT_USER_ID = "fanshanhong";
 
     // 连接状态：连接中
@@ -60,19 +67,33 @@ public class PushClient {
     // 全局, 是否关闭
     public static boolean isClosed = false;
 
+    // 当前连接状态
     public static int connectStatus = CONNECT_STATE_FAILURE;
 
     private Bootstrap bootstrap;
+
+    // 与服务端的连接
     private Channel channel = null;
 
+    // 当前尝试重连的次数
     private int attempts = 0;
+
+    // 最大重连次数
     private static final int MAX_ATTEMPTS = 12;
+
+    // Netty 提供的定时器
     private Timer timer = new HashedWheelTimer();
 
+    /**
+     * 当前尝试次数清零
+     */
     public void clearAttempts() {
         attempts = 0;
     }
 
+    /**
+     * 初始化 bootstrap
+     */
     public void initBootStrap() {
         NioEventLoopGroup eventLoopGroup = new NioEventLoopGroup();
         bootstrap = new Bootstrap();
@@ -85,6 +106,9 @@ public class PushClient {
                 .channel(NioSocketChannel.class);
     }
 
+    /**
+     * 连接服务器
+     */
     private void connect() {
         connectStatus = CONNECT_STATE_CONNECTING;
 
@@ -120,7 +144,7 @@ public class PushClient {
                         logger.info("连接成功");
                         connectStatus = CONNECT_STATE_SUCCESSFUL;
                         // 构造一条握手消息, 并发送
-                        Message handshakeMessage = new Message(1001,  MY_CLIENT_USER_ID, "server");
+                        Message handshakeMessage = new Message(1001, MY_CLIENT_USER_ID, "server");
                         channel.writeAndFlush(Unpooled.wrappedBuffer(GsonUtil.getInstance().toJson(handshakeMessage).getBytes(CharsetUtil.UTF_8)));
 
                     } else {
@@ -130,7 +154,7 @@ public class PushClient {
                         // 这块不能使用fireChannelInactive 再来手动触发  channelInactive方法了, 因为我们把Channel 已经关闭了.
                         // f.channel().pipeline().fireChannelInactive();
                         // TODO:reconnect
-                        // 重新连接
+                        // 尝试重新连接
                         startTimerToReconnect();
                     }
                 }
@@ -151,13 +175,16 @@ public class PushClient {
             e.printStackTrace();
             connectStatus = CONNECT_STATE_FAILURE;
         } finally {
-            // 这里不要优雅的关闭, 要重连
+            // 这里不要优雅的关闭, 要重连. 走到这里, 表示在连接的过程中出现问题
             // eventLoopGroup.shutdownGracefully();
             // TODO:reconnect
             startTimerToReconnect();
         }
     }
 
+    /**
+     * 开启定时器进行重连
+     */
     public void startTimerToReconnect() {
 
         if (!PushClient.getInstance().isReconnectNeeded()) {
@@ -257,7 +284,13 @@ public class PushClient {
 
     }
 
+    /**
+     * 是否需要重连
+     *
+     * @return
+     */
     public boolean isReconnectNeeded() {
+        // 连接失败  且  未关闭的情况下进行重连.   第一次初始化, 视为 CONNECT_STATE_FAILURE
         if (connectStatus == CONNECT_STATE_FAILURE && !isClosed) {
             return true;
         }

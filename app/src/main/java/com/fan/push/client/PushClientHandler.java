@@ -18,11 +18,15 @@ import com.fan.push.util.StackTraceUtil;
 
 
 /**
- *
+ * @Description: 客户端处理器
+ * @Author: fan
+ * @Date: 2020-9-19 21:19
+ * @Modify:
  */
 public class PushClientHandler extends ChannelInboundHandlerAdapter {
 
-    private int count = 0;
+    // 为了测试.  第一条消息, 发送回执, 第二条消息, 不发回执, 看看情况
+    // private int count = 0;
 
     // 用于防止消息重复接收
     // 服务器向客户端发送消息1次，客户端向服务器发送这条消息的回执。
@@ -39,8 +43,8 @@ public class PushClientHandler extends ChannelInboundHandlerAdapter {
     // 下次客户端再上线, 服务器会把离线消息A再次发来.
     // 此时, 客户端上线, PushClientHandler 对象是新建的, 那么 oldMessageQueue 集合就是空的了. 导致的问题就是: 客户端会认为A 并不是一条重复的消息, 会显示出来. 其实, 消息A在客户端上次下线之前就已经处理过了
     // 那怎么做呢?
-    // 要把收到的消息持久化吧?
-    // 我们自己弄个数据库, 里面用于存历史收到的消息的messageId. 这样就可以了.
+    // 正确的做法应该是要把收到的消息持久化吧?
+    // 我们客户端自己弄个数据库, 里面用于存历史收到的消息的messageId. 这样就可以了.
     // 同时要考虑到, 这个数据库的记录数量不能无限增长. 因为一直收消息一直收, 就爆炸了
     // 可以设置数据库记录最大10万条. 多了之后, 就把最老的记录覆盖, 这样是不是就可以了.
     private Queue<String> oldMessageQueue = new ArrayBlockingQueue(4096);
@@ -55,7 +59,6 @@ public class PushClientHandler extends ChannelInboundHandlerAdapter {
             LoggerUtil.logger.info("收到服务器的消息:" + msgStr); // Magic Socket Debugger 用UTF-8编码
             // logger.info("收到服务器的消息:" + byteBuf.toString(Charset.forName("unicode"))); // SSokit 用Unicode 编码,否则乱码
 
-            //握手失败且返回了消息一定是服务端认证没通过 所以这里需要关闭客户端, 也不需要重连, 因为账号密码都错了!
             Message message = GsonUtil.getInstance().fromJson(msgStr, Message.class);
 
             if (message == null) {
@@ -68,7 +71,7 @@ public class PushClientHandler extends ChannelInboundHandlerAdapter {
             }
 
             if (message.getMessageType() == 1001 && message.getStatus() == -1) {
-                // 握手失败
+                // 握手失败, 表示服务端认证没通过 所以这里需要关闭客户端, 也不需要重连, 因为账号密码都错了!
                 PushClient.getInstance().close(ctx.channel());
             } else if (message.getMessageType() == 1001 && message.getStatus() == 1) {
                 // 握手成功, 开始心跳, 此时再add IdleStateHandler才对
@@ -76,12 +79,12 @@ public class PushClientHandler extends ChannelInboundHandlerAdapter {
                     ctx.pipeline().addFirst(handler.getClass().getSimpleName(), handler);
                 }
 
-                // 主动先发一条心跳数据包给服务端
+                // 主动先发一条心跳数据包(ping 消息)给服务端
                 Message pingMessage = Message.obtainPingMessage();
                 pingMessage.setFrom(PushClient.MY_CLIENT_USER_ID);
                 ctx.writeAndFlush(Unpooled.wrappedBuffer(GsonUtil.getInstance().toJson(pingMessage).getBytes(CharsetUtil.UTF_8)));
             } else if (message.getMessageType() == 1004) {
-                count++;
+                //count++;
 
                 // 集合已经包含这一条消息的messageId了, 认为是重复消息, 只发回执不处理
                 if (oldMessageQueue.contains(message.getMessageId())) {

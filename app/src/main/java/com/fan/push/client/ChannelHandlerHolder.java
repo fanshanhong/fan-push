@@ -22,6 +22,12 @@ import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.LengthFieldPrepender;
 import io.netty.handler.timeout.IdleStateHandler;
 
+/**
+ * @Description:
+ * @Author: fan
+ * @Date: 2020-9-19 21:19
+ * @Modify:
+ */
 public class ChannelHandlerHolder {
 
     /**
@@ -31,11 +37,11 @@ public class ChannelHandlerHolder {
      */
     public static ChannelHandler[] handlers() {
         return new ChannelHandler[]{
-                new ConnectionWatchdog(),
+                new ConnectionWatchdog(),// 链路检测
                 new LengthFieldPrepender(2),
                 new LengthFieldBasedFrameDecoder(65535, 0, 2, 0, 2),
-                new HeartBeatClientHandler(),
-                new PushClientHandler()
+                new HeartBeatClientHandler(),// 心跳处理器
+                new PushClientHandler()// 客户端处理器
         };
     }
 
@@ -45,13 +51,11 @@ public class ChannelHandlerHolder {
      * @return
      */
     public static ChannelHandler[] heartbeatHandlers() {
-        // 握手成功后, 才把  watchDog 和  IdleStateHandler加入到pipeline中做心跳和重连操作.
+        // 握手成功后, 才把  WatchDog 和  IdleStateHandler加入到pipeline中做心跳和重连操作.
         // 如果都没有握手成功, 就认为不是合法用户, 不需要这些
 
         return new ChannelHandler[]{
                 new IdleStateHandler(20, 5, 0, TimeUnit.SECONDS),
         };
-
-
     }
 }
