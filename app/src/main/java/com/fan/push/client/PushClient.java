@@ -84,6 +84,12 @@ public class PushClient {
     // Netty 提供的定时器
     private Timer timer = new HashedWheelTimer();
 
+    // 当收到新消息时候的回调
+    private INewMessageListener newMessageListener;
+
+    // 连接状态变化回调
+    private IConnectStatusListener connectStatusListener;
+
     /**
      * 当前尝试次数清零
      */
@@ -109,9 +115,11 @@ public class PushClient {
     /**
      * 连接服务器
      */
-    private void connect() {
+    public void connect() {
         connectStatus = CONNECT_STATE_CONNECTING;
-
+        if (PushClient.getInstance().getConnectStatusListener() != null) {
+            PushClient.getInstance().getConnectStatusListener().connecting();
+        }
         try {
 
             logger.info("正在连接中...");
@@ -143,6 +151,9 @@ public class PushClient {
                     if (succeed && channel != null) {
                         logger.info("连接成功");
                         connectStatus = CONNECT_STATE_SUCCESSFUL;
+                        if (PushClient.getInstance().getConnectStatusListener() != null) {
+                            PushClient.getInstance().getConnectStatusListener().connectSuccess();
+                        }
                         // 构造一条握手消息, 并发送
                         Message handshakeMessage = new Message(1001, MY_CLIENT_USER_ID, "server");
                         channel.writeAndFlush(Unpooled.wrappedBuffer(GsonUtil.getInstance().toJson(handshakeMessage).getBytes(CharsetUtil.UTF_8)));
@@ -150,6 +161,9 @@ public class PushClient {
                     } else {
                         logger.info("连接失败");
                         connectStatus = CONNECT_STATE_FAILURE;
+                        if (PushClient.getInstance().getConnectStatusListener() != null) {
+                            PushClient.getInstance().getConnectStatusListener().connectFail();
+                        }
 
                         // 这块不能使用fireChannelInactive 再来手动触发  channelInactive方法了, 因为我们把Channel 已经关闭了.
                         // f.channel().pipeline().fireChannelInactive();
@@ -174,6 +188,9 @@ public class PushClient {
         } catch (Exception e) {
             e.printStackTrace();
             connectStatus = CONNECT_STATE_FAILURE;
+            if (PushClient.getInstance().getConnectStatusListener() != null) {
+                PushClient.getInstance().getConnectStatusListener().connectFail();
+            }
         } finally {
             // 这里不要优雅的关闭, 要重连. 走到这里, 表示在连接的过程中出现问题
             // eventLoopGroup.shutdownGracefully();
@@ -277,6 +294,9 @@ public class PushClient {
             ex.printStackTrace();
         } finally {
             connectStatus = CONNECT_STATE_FAILURE;
+            if (PushClient.getInstance().getConnectStatusListener() != null) {
+                PushClient.getInstance().getConnectStatusListener().connectFail();
+            }
             channel = null;
             bootstrap = null;
         }
@@ -295,6 +315,22 @@ public class PushClient {
             return true;
         }
         return false;
+    }
+
+    public INewMessageListener getNewMessageListener() {
+        return newMessageListener;
+    }
+
+    public void setNewMessageListener(INewMessageListener newMessageListener) {
+        this.newMessageListener = newMessageListener;
+    }
+
+    public IConnectStatusListener getConnectStatusListener() {
+        return connectStatusListener;
+    }
+
+    public void setConnectStatusListener(IConnectStatusListener connectStatusListener) {
+        this.connectStatusListener = connectStatusListener;
     }
 }
 

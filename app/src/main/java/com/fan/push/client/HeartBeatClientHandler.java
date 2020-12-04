@@ -26,12 +26,18 @@ public class HeartBeatClientHandler extends ChannelInboundHandlerAdapter {
             switch (state) {
                 case READER_IDLE: {
                     // 规定时间内没收到服务端心跳包响应，进行重连操作
-                    // 为啥  又要监听  读超时, 又要在  WatchDog的 ChannelInActive 中重连?
-                    // 因为, 如果是服务器把客户端的连接关闭了, 只进入  WatchDog的 ChannelInActive, 不会再进入这里
-                    //      如果是服务器断网,客户端断网之类的情况,客户端不会进入 inActive, 只能通过这里的 读超时来判断
+                    // Q: 为啥  又要监听  读超时, 又要在  WatchDog 的 ChannelInActive 中重连?
+                    // 因为, 如果是服务器把客户端的连接关闭了, 只进入  WatchDog 的 ChannelInActive, 不会再进入读超时
+                    // 可以自行测试, 如果服务器把客户端的连接关闭了, 依次回调方法:  channelInactive channelUnregistered handlerRemoved.
+                    //        这样Handler已经被移除了, 就不会收到读超时的事件了
+
+                    // 如果是服务器与客户端之间网络的中间节点问题, 客户端不会进入 inActive, 只能通过这里的 读超时来判断
                     // 注意: 手机端断开WIFI,或者开飞行模式, 都是会触发 ChannelInActive的
                     // 这里主要是用于网络中间节点断了这种情况.
                     PushClient.connectStatus = PushClient.CONNECT_STATE_FAILURE;
+                    if (PushClient.getInstance().getConnectStatusListener() != null) {
+                        PushClient.getInstance().getConnectStatusListener().connectFail();
+                    }
                     LoggerUtil.logger.info("PushClient.connectState=" + PushClient.connectStatus + "  PushClient.isClosed=" + PushClient.isClosed);
 
                     if (!PushClient.getInstance().isReconnectNeeded()) {

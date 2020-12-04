@@ -155,7 +155,7 @@ public class PushServerHandler extends ChannelInboundHandlerAdapter {
             } else if (1004 == message.getMessageType()) {
                 if (message.getStatus() == 1) { // 客户端正常收到消息, 发来回执
                     if (pushServer != null) {
-                        pushServer.removeMsgFromRetryManager(message.getTo(), message);
+                        pushServer.removeMsgFromRetryManager(message.getFrom(), message);
                     }
                 }
             }

@@ -191,5 +191,6 @@ public class MessageLooper implements TimerTask {
      */
     public void stopLoop() {
         timer.stop();
+        timer = null;
     }
 }

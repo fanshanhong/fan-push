@@ -97,7 +97,11 @@ public class PushClientHandler extends ChannelInboundHandlerAdapter {
 
                 oldMessageQueue.add(message.getMessageId());
                 // 构造一条接收回执消息
-                Message reportBackMessage = new Message(1004, PushClient.MY_CLIENT_USER_ID, "server");
+                // 这里不能new啊.. new 出来的 messageId 变化了
+                // Message reportBackMessage = new Message(1004, PushClient.MY_CLIENT_USER_ID, "server");
+                Message reportBackMessage = new Message(message);
+                reportBackMessage.setFrom(PushClient.MY_CLIENT_USER_ID);
+                reportBackMessage.setTo("server");
                 reportBackMessage.setStatus(1);
 
                 // 想要测试消息重发, 这块注释即可
@@ -110,6 +114,10 @@ public class PushClientHandler extends ChannelInboundHandlerAdapter {
 
                 // TODO:自己处理这条消息
                 System.out.println("服务器说:" + message.getContent());
+                if (PushClient.getInstance().getNewMessageListener() != null) {
+                    // 回调, 告知应用层
+                    PushClient.getInstance().getNewMessageListener().onNewMessageReceived(message);
+                }
 
                 // 想说:
                 // 客户端收到消息之后, 是不是需要按照时间戳排序一下再显示的? 应该不是按照哪条先收到就哪条展示在前面吧?

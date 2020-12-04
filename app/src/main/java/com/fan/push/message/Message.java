@@ -73,6 +73,13 @@ public class Message {
         this.timestamp = System.currentTimeMillis();
     }
 
+    public Message(Message message) {
+        this.messageType = message.getMessageType();
+        this.messageId = message.getMessageId();
+        this.timestamp = System.currentTimeMillis();
+        this.content = message.content;
+    }
+
     /**
      * 默认的ping消息
      * 使用者需要记得将 from 更换成客户端的 userId
