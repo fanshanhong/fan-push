@@ -10,25 +10,56 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Hello World!"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="20dp"
+        android:layout_marginBottom="20dp"
+        android:text="fan-push Android端测试Demo"
+        android:textColor="#000000"
+        android:textSize="18dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
-    <Button
+
+    <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="连接"
-        android:id="@+id/connect"/>
+        android:layout_marginLeft="16dp"
+        android:text="tip:服务器IP和PORT在ServerConfig中配置" />
 
-    <EditText
-        android:id="@+id/tv"
+    <Button
+        android:id="@+id/connect"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="16dp"
+        android:layout_marginTop="20dp"
+        android:text="连接服务器" />
+
+    <TextView
+        android:id="@+id/connect_status"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="16dp"
+        android:layout_marginTop="20dp"
+        android:hint="当前连接状态"
+        android:textColor="#990000" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="16dp"
+        android:layout_marginTop="20dp"
+        android:text="服务端推送的消息展示在这里:" />
+
+    <TextView
+        android:id="@+id/content"
         android:layout_width="match_parent"
-        android:layout_height="100dp" />
+        android:layout_height="match_parent"
+        android:layout_marginTop="20dp"
+        android:background="#44999999"
+        android:padding="16dp"
+        android:scrollbars="vertical"
+        android:textColor="#990000"
+        android:textSize="14dp" />
 
-    <Button
-        android:id="@+id/button"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="fasong" />
 </LinearLayout>
